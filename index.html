@@ -125,18 +125,26 @@
         };
 
         const music = document.getElementById('bg-music');
-        let audioCtx, vfxEnabled = true, audioUnlocked = false;
+        let audioCtx, vfxEnabled = true, audioed = false;
 
         function unlockAudio() {
             if (!audioUnlocked) {
+                // Force the AudioContext to start
                 if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
-                music.play().catch(() => {});
+        
+                // Explicitly reload and play the track
+                music.load(); 
+                music.play().then(() => {
+                console.log("Music started!");
                 audioUnlocked = true;
                 updateHUD();
-            }
+             }).catch(e => {
+                console.log("Waiting for one more clear click...");
+            });
         }
-
+    }
+        
         function toggleVfx(e) {
             e.stopPropagation();
             vfxEnabled = !vfxEnabled;
@@ -302,3 +310,4 @@
     </script>
 </body>
 </html>
+
