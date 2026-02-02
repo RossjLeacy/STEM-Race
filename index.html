@@ -12,8 +12,8 @@
         body { font-family: 'Quicksand', sans-serif; background-color: #020617; color: white; overflow: hidden; margin: 0; }
         .cyber-font { font-family: 'Orbitron', sans-serif; }
         .grid-cell { width: 55px; height: 55px; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; position: relative; }
-        .player-1 { background: var(--p1); box-shadow: 0 0 20px var(--p1); border-radius: 50%; border: 2px solid white; width: 40px; height: 40px; }
-        .player-2 { background: var(--p2); box-shadow: 0 0 20px var(--p2); border-radius: 50%; border: 2px solid white; width: 40px; height: 40px; }
+        .player-1 { background: var(--p1); box-shadow: 0 0 20px var(--p1); border-radius: 50%; border: 2px solid white; width: 40px; height: 40px; transition: all 0.3s; }
+        .player-2 { background: var(--p2); box-shadow: 0 0 20px var(--p2); border-radius: 50%; border: 2px solid white; width: 40px; height: 40px; transition: all 0.3s; }
         .blocker { background: #475569; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); width: 35px; height: 35px; }
         .power-tile { background: #facc15; box-shadow: 0 0 15px #facc15; animation: pulse 1.5s infinite; border-radius: 12px; }
         @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.9); opacity: 0.6; } }
@@ -47,7 +47,7 @@
 
     <div id="board" class="grid grid-cols-8 gap-1 bg-slate-900 p-2 rounded-xl border border-slate-700 shadow-2xl mt-12"></div>
 
-    <audio id="bg-music" loop>
+    <audio id="bg-music" loop preload="auto">
         <source src="track.mp3" type="audio/mpeg">
     </audio>
 
@@ -69,51 +69,93 @@
 
     <script>
         const stemBank = [
-            // SCIENCE
+            // SCIENCE (20)
             { q: "Atomic number of Carbon?", o: ["6", "12", "14"], c: 0, cat: "S" },
             { q: "Speed of light (approximate)?", o: ["300k km/s", "150k km/s", "500k km/s"], c: 0, cat: "S" },
             { q: "Powerhouse of the cell?", o: ["Nucleus", "Mitochondria", "Ribosome"], c: 1, cat: "S" },
             { q: "pH of pure water?", o: ["5", "7", "9"], c: 1, cat: "S" },
             { q: "Most common element in Universe?", o: ["Hydrogen", "Helium", "Oxygen"], c: 0, cat: "S" },
-            { q: "Noble gas used in arc welding?", o: ["Neon", "Argon", "Oxygen"], c: 1, cat: "S" },
+            { q: "Gas that makes up 78% of Earth's atmosphere?", o: ["Oxygen", "Nitrogen", "Argon"], c: 1, cat: "S" },
             { q: "Hardest natural substance?", o: ["Steel", "Diamond", "Quartz"], c: 1, cat: "S" },
             { q: "Chemical symbol for Gold?", o: ["Ag", "Au", "Gd"], c: 1, cat: "S" },
-            { q: "Which planet is the 'Red Planet'?", o: ["Mars", "Venus", "Saturn"], c: 0, cat: "S" },
+            { q: "Which planet is known as the Red Planet?", o: ["Mars", "Venus", "Saturn"], c: 0, cat: "S" },
             { q: "Unit of electrical current?", o: ["Volt", "Ampere", "Ohm"], c: 1, cat: "S" },
-            // TECH
+            { q: "How many chambers in a human heart?", o: ["2", "4", "6"], c: 1, cat: "S" },
+            { q: "What is the charge of an electron?", o: ["Positive", "Neutral", "Negative"], c: 2, cat: "S" },
+            { q: "Boiling point of water at sea level?", o: ["90C", "100C", "110C"], c: 1, cat: "S" },
+            { q: "DNA stands for...?", o: ["Deoxyribonucleic Acid", "Deribon Acid", "Deoxyribose"], c: 0, cat: "S" },
+            { q: "What gas do plants primarily exhale at night?", o: ["Oxygen", "CO2", "Nitrogen"], c: 1, cat: "S" },
+            { q: "Scale used for Earthquakes?", o: ["Richter", "Celsius", "Newton"], c: 0, cat: "S" },
+            { q: "Closest planet to the sun?", o: ["Venus", "Mercury", "Earth"], c: 1, cat: "S" },
+            { q: "Study of fossils is called?", o: ["Paleontology", "Geology", "Biology"], c: 0, cat: "S" },
+            { q: "Gravity on Moon vs Earth?", o: ["1/2", "1/6", "1/10"], c: 1, cat: "S" },
+            { q: "Main component of the Sun?", o: ["Carbon", "Helium", "Hydrogen"], c: 2, cat: "S" },
+
+            // TECHNOLOGY (20)
             { q: "Standard port for HTTPS?", o: ["80", "443", "22"], c: 1, cat: "T" },
             { q: "Logic gate needing both 1s for 1?", o: ["OR", "XOR", "AND"], c: 2, cat: "T" },
             { q: "Smallest unit of data?", o: ["Bit", "Byte", "Nibble"], c: 0, cat: "T" },
-            { q: "SQL stands for...", o: ["Structured Query Language", "System Logic", "Query List"], c: 0, cat: "T" },
+            { q: "SQL stands for...?", o: ["Structured Query Language", "System Logic", "Query List"], c: 0, cat: "T" },
             { q: "Binary for decimal 10?", o: ["1001", "1010", "1100"], c: 1, cat: "T" },
             { q: "Python file extension?", o: [".py", ".pyt", ".js"], c: 0, cat: "T" },
             { q: "Main function of a router?", o: ["Display", "Packet Forwarding", "Storage"], c: 1, cat: "T" },
-            { q: "A kilobyte is exactly...", o: ["1000 bytes", "1024 bytes", "1048 bytes"], c: 1, cat: "T" },
-            { q: "Kernel in an OS is...", o: ["The GUI", "The core program", "File system"], c: 1, cat: "T" },
+            { q: "A kilobyte is exactly...?", o: ["1000 bytes", "1024 bytes", "1048 bytes"], c: 1, cat: "T" },
+            { q: "Kernel in an OS is...?", o: ["The GUI", "The core program", "File system"], c: 1, cat: "T" },
             { q: "What is 'Cloud' computing?", o: ["Weather tracking", "Remote servers", "High speed wifi"], c: 1, cat: "T" },
-            // ENGINEERING
+            { q: "Who founded Linux?", o: ["Linus Torvalds", "Bill Gates", "Steve Jobs"], c: 0, cat: "T" },
+            { q: "Standard Wi-Fi frequency?", o: ["2.4 GHz", "10 GHz", "50 MHz"], c: 0, cat: "T" },
+            { q: "What does URL stand for?", o: ["Uniform Resource Locator", "User Route List", "Universal Link"], c: 0, cat: "T" },
+            { q: "What is an IP address?", o: ["Internet Protocol", "Internal Post", "Image Path"], c: 0, cat: "T" },
+            { q: "GPU is primarily used for?", o: ["Text", "Graphics", "Audio"], c: 1, cat: "T" },
+            { q: "A 'bug' in code is a...?", o: ["Virus", "Error", "Hardware fail"], c: 1, cat: "T" },
+            { q: "HTML stands for?", o: ["Hypertext Markup Language", "High Tech Main Log", "Home Tool Log"], c: 0, cat: "T" },
+            { q: "Motherboard is the...?", o: ["Main Memory", "Main Circuit Board", "The Fan"], c: 1, cat: "T" },
+            { q: "Open source OS?", o: ["Windows", "MacOS", "Linux"], c: 2, cat: "T" },
+            { q: "What is 'Phishing'?", o: ["A sport", "A digital scam", "Coding"], c: 1, cat: "T" },
+
+            // ENGINEERING (20)
             { q: "Primary stress in a bridge cable?", o: ["Compression", "Tension", "Shear"], c: 1, cat: "E" },
             { q: "Material for semiconductor chips?", o: ["Iron", "Silicon", "Gold"], c: 1, cat: "E" },
-            { q: "CAD stands for...", o: ["Computer Design", "Calculated Air", "Auto Draft"], c: 0, cat: "E" },
-            { q: "Concrete is strongest in...", o: ["Tension", "Compression", "Torsion"], c: 1, cat: "E" },
+            { q: "CAD stands for...?", o: ["Computer Aided Design", "Calculated Air", "Auto Draft"], c: 0, cat: "E" },
+            { q: "Concrete is strongest in...?", o: ["Tension", "Compression", "Torsion"], c: 1, cat: "E" },
             { q: "Purpose of an airfoil?", o: ["Weight", "Lift", "Friction"], c: 1, cat: "E" },
             { q: "Unit of electrical capacitance?", o: ["Ohm", "Farad", "Henry"], c: 1, cat: "E" },
-            { q: "HVAC stands for...", o: ["Voltage", "Heating, Vent, AC", "Hydraulic"], c: 1, cat: "E" },
-            { q: "A truss is used in...", o: ["Software", "Bridges", "Circuits"], c: 1, cat: "E" },
+            { q: "HVAC stands for?", o: ["Heating, Vent, AC", "High Voltage", "Hydraulic"], c: 0, cat: "E" },
+            { q: "A truss is used in...?", o: ["Software", "Bridges", "Circuits"], c: 1, cat: "E" },
             { q: "Study of fluid flow?", o: ["Statics", "Fluid Dynamics", "Mechanics"], c: 1, cat: "E" },
-            { q: "A cantilever is fixed at...", o: ["Both ends", "One end", "Center"], c: 1, cat: "E" },
-            // MATH
+            { q: "A cantilever is fixed at...?", o: ["Both ends", "One end", "Center"], c: 1, cat: "E" },
+            { q: "Unit of power?", o: ["Joule", "Watt", "Volt"], c: 1, cat: "E" },
+            { q: "Pascal is a unit of...?", o: ["Power", "Pressure", "Force"], c: 1, cat: "E" },
+            { q: "Gear that changes direction?", o: ["Bevel gear", "Spur gear", "Rack"], c: 0, cat: "E" },
+            { q: "Measure of energy chaos?", o: ["Entropy", "Enthalpy", "Gravity"], c: 0, cat: "E" },
+            { q: "Archimedes screw moves...?", o: ["Water", "Air", "Electricity"], c: 0, cat: "E" },
+            { q: "A flywheel stores...?", o: ["Chemicals", "Heat", "Kinetic Energy"], c: 2, cat: "E" },
+            { q: "Newton's 3rd Law is about...?", o: ["Inertia", "Action/Reaction", "Gravity"], c: 1, cat: "E" },
+            { q: "Conductor best at heat?", o: ["Copper", "Wood", "Plastic"], c: 0, cat: "E" },
+            { q: "Scale for earthquakes?", o: ["Celsius", "Richter", "Kelvin"], c: 1, cat: "E" },
+            { q: "What is Ohm's Law?", o: ["V=IR", "F=MA", "E=MC2"], c: 0, cat: "E" },
+
+            // MATH (20)
             { q: "Derivative of x²?", o: ["x", "2x", "x³"], c: 1, cat: "M" },
             { q: "Sum of angles in a triangle?", o: ["90°", "180°", "360°"], c: 1, cat: "M" },
             { q: "Square root of 625?", o: ["15", "25", "35"], c: 1, cat: "M" },
-            { q: "0 factorial equals...", o: ["0", "1", "Infinity"], c: 1, cat: "M" },
+            { q: "0 factorial equals...?", o: ["0", "1", "Infinity"], c: 1, cat: "M" },
             { q: "Hypotenuse of 3-4 triangle?", o: ["5", "6", "7"], c: 0, cat: "M" },
             { q: "Value of Pi (approximate)?", o: ["3.12", "3.14", "3.16"], c: 1, cat: "M" },
             { q: "2 to the power of 5?", o: ["10", "16", "32"], c: 2, cat: "M" },
-            { q: "10% of 1500 is...", o: ["15", "150", "1500"], c: 1, cat: "M" },
-            { q: "Log10(100) equals...", o: ["1", "2", "10"], c: 1, cat: "M" },
-            { q: "A dodecagon has...", o: ["10 sides", "12 sides", "20 sides"], c: 1, cat: "M" }
-            // Note: Add remaining 40 to hit the 80 count if needed
+            { q: "10% of 1500 is...?", o: ["15", "150", "1500"], c: 1, cat: "M" },
+            { q: "Log10(100) equals...?", o: ["1", "2", "10"], c: 1, cat: "M" },
+            { q: "A dodecagon has...?", o: ["10 sides", "12 sides", "20 sides"], c: 1, cat: "M" },
+            { q: "Who invented the coordinates plane?", o: ["Descartes", "Newton", "Euclid"], c: 0, cat: "M" },
+            { q: "Sin(90) equals?", o: ["0", "1", "0.5"], c: 1, cat: "M" },
+            { q: "Quadratic formula finds the...?", o: ["Roots", "Slopes", "Angles"], c: 0, cat: "M" },
+            { q: "Degrees in a circle?", o: ["180", "360", "720"], c: 1, cat: "M" },
+            { q: "Average of 10, 20, 30?", o: ["10", "20", "30"], c: 1, cat: "M" },
+            { q: "Golden Ratio is approx?", o: ["1.618", "3.14", "2.71"], c: 0, cat: "M" },
+            { q: "Is 27 a prime number?", o: ["Yes", "No", "Depends"], c: 1, cat: "M" },
+            { q: "Degrees in a square?", o: ["180", "360", "540"], c: 1, cat: "M" },
+            { q: "Base of binary system?", o: ["1", "2", "10"], c: 1, cat: "M" },
+            { q: "Formula for area of circle?", o: ["πr2", "2πr", "L*W"], c: 0, cat: "M" }
         ];
 
         let deck = [...stemBank].sort(() => Math.random() - 0.5);
@@ -129,21 +171,20 @@
 
         function unlockAudio() {
             if (!audioUnlocked) {
-                // Force the AudioContext to start
+                // Initialize Audio Context First
                 if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
-        
-                // Explicitly reload and play the track
+                
+                // Then try to play music
                 music.load(); 
                 music.play().then(() => {
-                console.log("Music started!");
-                audioUnlocked = true;
-                updateHUD();
-             }).catch(e => {
-                console.log("Waiting for one more clear click...");
-            });
+                    audioUnlocked = true;
+                    updateHUD();
+                }).catch(e => {
+                    console.log("Waiting for gesture...");
+                });
+            }
         }
-    }
         
         function toggleVfx(e) {
             e.stopPropagation();
@@ -207,7 +248,7 @@
                 showQ(idx);
             } else if ((dist === 1 || diag) && game.blockers.includes(idx)) {
                 if (isTrapped(cur)) {
-                    if (confirm("TRAPPED! Use a hard question to break this block?")) showQ(idx, true);
+                    if (confirm("TRAPPED! Break this block?")) showQ(idx, true);
                 }
             }
         }
@@ -310,5 +351,3 @@
     </script>
 </body>
 </html>
-
-
