@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STEM RACE 11.0: UNLOCKED</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root { --p1: #3b82f6; --p2: #ef4444; }
+        body { font-family: 'Quicksand', sans-serif; background-color: #020617; color: white; overflow: hidden; margin: 0; }
+        .cyber-font { font-family: 'Orbitron', sans-serif; }
+        .grid-cell { width: 55px; height: 55px; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; position: relative; }
+        .player-1 { background: var(--p1); box-shadow: 0 0 20px var(--p1); border-radius: 50%; border: 2px solid white; width: 40px; height: 40px; transition: all 0.3s; }
+        .player-2 { background: var(--p2); box-shadow: 0 0 20px var(--p2); border-radius: 50%; border: 2px solid white; width: 40px; height: 40px; transition: all 0.3s; }
+        .blocker { background: #475569; clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); width: 35px; height: 35px; }
+        .power-tile { background: #facc15; box-shadow: 0 0 15px #facc15; animation: pulse 1.5s infinite; border-radius: 12px; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.9); opacity: 0.6; } }
+        .summary-card { background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 1.5rem; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen" onclick="unlockAudio()">
+
+    <div class="fixed top-0 left-0 right-0 p-4 flex justify-between items-start z-40">
+        <div class="bg-slate-900/90 p-3 border-l-4 border-blue-500 rounded-lg">
+            <h3 class="cyber-font text-blue-400 text-[10px]">P1 SCORE</h3>
+            <p id="p1-score" class="text-xl font-bold">0</p>
+        </div>
+        
+        <div class="text-center">
+            <h1 class="cyber-font text-xl font-bold text-yellow-500">STEM RACE</h1>
+            <p id="turn-indicator" class="text-[10px] mt-1 uppercase tracking-widest text-yellow-500 font-bold bg-slate-800 px-3 py-1 rounded-full animate-pulse">Click Anywhere to Sync Audio</p>
+            
+            <div class="mt-2 bg-slate-800 p-2 rounded-xl border border-slate-700 flex gap-4 items-center shadow-xl">
+                <span class="text-[9px] cyber-font text-slate-400">VOL</span>
+                <input type="range" id="vol" min="0" max="1" step="0.1" value="0.5" class="w-16 h-1 bg-slate-600 rounded-lg appearance-none cursor-pointer">
+                <button id="vfx-btn" class="text-[10px] cyber-font text-green-500">VFX: ON</button>
+            </div>
+        </div>
+
+        <div class="bg-slate-900/90 p-3 border-r-4 border-red-500 rounded-lg text-right">
+            <h3 class="cyber-font text-red-400 text-[10px]">P2 SCORE</h3>
+            <p id="p2-score" class="text-xl font-bold">0</p>
+        </div>
+    </div>
+
+    <div id="board" class="grid grid-cols-8 gap-1 bg-slate-900 p-2 rounded-xl border border-slate-700 shadow-2xl mt-12"></div>
+
+    <audio id="bg-music" loop preload="auto">
+        <source src="track.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="modal" class="fixed inset-0 bg-black/95 hidden z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-slate-900 p-8 rounded-3xl border-2 border-yellow-500 max-w-md w-full">
+            <div id="timer-bar" class="w-full bg-slate-800 h-1 mb-6 rounded-full overflow-hidden">
+                <div id="timer-fill" class="h-full bg-red-500 w-full transition-all linear"></div>
+            </div>
+            <p id="q-text" class="text-xl font-bold mb-8"></p>
+            <div id="options" class="grid gap-3"></div>
+        </div>
+    </div>
+
+    <div id="summary" class="fixed inset-0 bg-slate-950 hidden z-[100] flex flex-col items-center justify-center p-6">
+        <h1 id="win-banner" class="cyber-font text-5xl font-bold mb-10 italic">VICTORY</h1>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl" id="summary-grid"></div>
+        <button onclick="location.reload()" class="mt-12 bg-yellow-500 text-black cyber-font font-bold px-12 py-4 rounded-full">RESTART</button>
+    </div>
+
+    <script>
+        const stemBank = [
+            // 80 QUESTIONS LOADED
+            { q: "Atomic number of Carbon?", o: ["6", "12", "14"], c: 0, cat: "S" },
+            { q: "Speed of light (approximate)?", o: ["300k km/s", "150k km/s", "500k km/s"], c: 0, cat: "S" },
+            { q: "Powerhouse of the cell?", o: ["Nucleus", "Mitochondria", "Ribosome"], c: 1, cat: "S" },
+            { q: "pH of pure water?", o: ["5", "7", "9"], c: 1, cat: "S" },
+            { q: "Most common element in Universe?", o: ["Hydrogen", "Helium", "Oxygen"], c: 0, cat: "S" },
+            { q: "Gas that makes up 78% of Earth's atmosphere?", o: ["Oxygen", "Nitrogen", "Argon"], c: 1, cat: "S" },
+            { q: "Hardest natural substance?", o: ["Steel", "Diamond", "Quartz"], c: 1, cat: "S" },
+            { q: "Chemical symbol for Gold?", o: ["Ag", "Au", "Gd"], c: 1, cat: "S" },
+            { q: "Which planet is known as the Red Planet?", o: ["Mars", "Venus", "Saturn"], c: 0, cat: "S" },
+            { q: "Unit of electrical current?", o: ["Volt", "Ampere", "Ohm"], c: 1, cat: "S" },
+            { q: "How many chambers in a human heart?", o: ["2", "4", "6"], c: 1, cat: "S" },
+            { q: "What is the charge of an electron?", o: ["Positive", "Neutral", "Negative"], c: 2, cat: "S" },
+            { q: "Boiling point of water at sea level?", o: ["90C", "100C", "110C"], c: 1, cat: "S" },
+            { q: "DNA stands for...?", o: ["Deoxyribonucleic Acid", "Deribon Acid", "Deoxyribose"], c: 0, cat: "S" },
+            { q: "What gas do plants primarily exhale at night?", o: ["Oxygen", "CO2", "Nitrogen"], c: 1, cat: "S" },
+            { q: "Scale used for Earthquakes?", o: ["Richter", "Celsius", "Newton"], c: 0, cat: "S" },
+            { q: "Closest planet to the sun?", o: ["Venus", "Mercury", "Earth"], c: 1, cat: "S" },
+            { q: "Study of fossils is called?", o: ["Paleontology", "Geology", "Biology"], c: 0, cat: "S" },
+            { q: "Gravity on Moon vs Earth?", o: ["1/2", "1/6", "1/10"], c: 1, cat: "S" },
+            { q: "Main component of the Sun?", o: ["Carbon", "Helium", "Hydrogen"], c: 2, cat: "S" },
+            { q: "Standard port for HTTPS?", o: ["80", "443", "22"], c: 1, cat: "T" },
+            { q: "Logic gate needing both 1s for 1?", o: ["OR", "XOR", "AND"], c: 2, cat: "T" },
+            { q: "Smallest unit of data?", o: ["Bit", "Byte", "Nibble"], c: 0, cat: "T" },
+            { q: "SQL stands for...?", o: ["Structured Query Language", "System Logic", "Query List"], c: 0, cat: "T" },
+            { q: "Binary for decimal 10?", o: ["1001", "1010", "1100"], c: 1, cat: "T" },
+            { q: "Python file extension?", o: [".py", ".pyt", ".js"], c: 0, cat: "T" },
+            { q: "Main function of a router?", o: ["Display", "Packet Forwarding", "Storage"], c: 1, cat: "T" },
+            { q: "A kilobyte is exactly...?", o: ["1000 bytes", "1024 bytes", "1048 bytes"], c: 1, cat: "T" },
+            { q: "Kernel in an OS is...?", o: ["The GUI", "The core program", "File system"], c: 1, cat: "T" },
+            { q: "What is 'Cloud' computing?", o: ["Weather tracking", "Remote servers", "High speed wifi"], c: 1, cat: "T" },
+            { q: "Who founded Linux?", o: ["Linus Torvalds", "Bill Gates", "Steve Jobs"], c: 0, cat: "T" },
+            { q: "Standard Wi-Fi frequency?", o: ["2.4 GHz", "10 GHz", "50 MHz"], c: 0, cat: "T" },
+            { q: "What does URL stand for?", o: ["Uniform Resource Locator", "User Route List", "Universal Link"], c: 0, cat: "T" },
+            { q: "What is an IP address?", o: ["Internet Protocol", "Internal Post", "Image Path"], c: 0, cat: "T" },
+            { q: "GPU is primarily used for?", o: ["Text", "Graphics", "Audio"], c: 1, cat: "T" },
+            { q: "A 'bug' in code is a...?", o: ["Virus", "Error", "Hardware fail"], c: 1, cat: "T" },
+            { q: "HTML stands for?", o: ["Hypertext Markup Language", "High Tech Main Log", "Home Tool Log"], c: 0, cat: "T" },
+            { q: "Motherboard is the...?", o: ["Main Memory", "Main Circuit Board", "The Fan"], c: 1, cat: "T" },
+            { q: "Open source OS?", o: ["Windows", "MacOS", "Linux"], c: 2, cat: "T" },
+            { q: "What is 'Phishing'?", o: ["A sport", "A digital scam", "Coding"], c: 1, cat: "T" },
+            { q: "Primary stress in a bridge cable?", o: ["Compression", "Tension", "Shear"], c: 1, cat: "E" },
+            { q: "Material for semiconductor chips?", o: ["Iron", "Silicon", "Gold"], c: 1, cat: "E" },
+            { q: "CAD stands for...?", o: ["Computer Aided Design", "Calculated Air", "Auto Draft"], c: 0, cat: "E" },
+            { q: "Concrete is strongest in...?", o: ["Tension", "Compression", "Torsion"], c: 1, cat: "E" },
+            { q: "Purpose of an airfoil?", o: ["Weight", "Lift", "Friction"], c: 1, cat: "E" },
+            { q: "Unit of electrical capacitance?", o: ["Ohm", "Farad", "Henry"], c: 1, cat: "E" },
+            { q: "HVAC stands for?", o: ["Heating, Vent, AC", "High Voltage", "Hydraulic"], c: 0, cat: "E" },
+            { q: "A truss is used in...?", o: ["Software", "Bridges", "Circuits"], c: 1, cat: "E" },
+            { q: "Study of fluid flow?", o: ["Statics", "Fluid Dynamics", "Mechanics"], c: 1, cat: "E" },
+            { q: "A cantilever is fixed at...?", o: ["Both ends", "One end", "Center"], c: 1, cat: "E" },
+            { q: "Unit of power?", o: ["Joule", "Watt", "Volt"], c: 1, cat: "E" },
+            { q: "Pascal is a unit of...?", o: ["Power", "Pressure", "Force"], c: 1, cat: "E" },
+            { q: "Gear that changes direction?", o: ["Bevel gear", "Spur gear", "Rack"], c: 0, cat: "E" },
+            { q: "Measure of energy chaos?", o: ["Entropy", "Enthalpy", "Gravity"], c: 0, cat: "E" },
+            { q: "Archimedes screw moves...?", o: ["Water", "Air", "Electricity"], c: 0, cat: "E" },
+            { q: "A flywheel stores...?", o: ["Chemicals", "Heat", "Kinetic Energy"], c: 2, cat: "E" },
+            { q: "Newton's 3rd Law is about...?", o: ["Inertia", "Action/Reaction", "Gravity"], c: 1, cat: "E" },
+            { q: "Conductor best at heat?", o: ["Copper", "Wood", "Plastic"], c: 0, cat: "E" },
+            { q: "Scale for earthquakes?", o: ["Celsius", "Richter", "Kelvin"], c: 1, cat: "E" },
+            { q: "What is Ohm's Law?", o: ["V=IR", "F=MA", "E=MC2"], c: 0, cat: "E" },
+            { q: "Derivative of x²?", o: ["x", "2x", "x³"], c: 1, cat: "M" },
+            { q: "Sum of angles in a triangle?", o: ["90°", "180°", "360°"], c: 1, cat: "M" },
+            { q: "Square root of 625?", o: ["15", "25", "35"], c: 1, cat: "M" },
+            { q: "0 factorial equals...?", o: ["0", "1", "Infinity"], c: 1, cat: "M" },
+            { q: "Hypotenuse of 3-4 triangle?", o: ["5", "6", "7"], c: 0, cat: "M" },
+            { q: "Value of Pi (approximate)?", o: ["3.12", "3.14", "3.16"], c: 1, cat: "M" },
+            { q: "2 to the power of 5?", o: ["10", "16", "32"], c: 2, cat: "M" },
+            { q: "10% of 1500 is...?", o: ["15", "150", "1500"], c: 1, cat: "M" },
+            { q: "Log10(100) equals...?", o: ["1", "2", "10"], c: 1, cat: "M" },
+            { q: "A dodecagon has...?", o: ["10 sides", "12 sides", "20 sides"], c: 1, cat: "M" },
+            { q: "Who invented the coordinates plane?", o: ["Descartes", "Newton", "Euclid"], c: 0, cat: "M" },
+            { q: "Sin(90) equals?", o: ["0", "1", "0.5"], c: 1, cat: "M" },
+            { q: "Quadratic formula finds the...?", o: ["Roots", "Slopes", "Angles"], c: 0, cat: "M" },
+            { q: "Degrees in a circle?", o: ["180", "360", "720"], c: 1, cat: "M" },
+            { q: "Average of 10, 20, 30?", o: ["10", "20", "30"], c: 1, cat: "M" },
+            { q: "Golden Ratio is approx?", o: ["1.618", "3.14", "2.71"], c: 0, cat: "M" },
+            { q: "Is 27 a prime number?", o: ["Yes", "No", "Depends"], c: 1, cat: "M" },
+            { q: "Degrees in a square?", o: ["180", "360", "540"], c: 1, cat: "M" },
+            { q: "Base of binary system?", o: ["1", "2", "10"], c: 1, cat: "M" },
+            { q: "Formula for area of circle?", o: ["πr2", "2πr", "L*W"], c: 0, cat: "M" }
+        ];
+
+        let deck = [...stemBank].sort(() => Math.random() - 0.5);
+        let game = { 
+            p1: 56, p2: 7, turn: 1, blockers: [], 
+            powers: [24,25,26,27,36,37,38,39], 
+            fire: false, awaitB: false, 
+            stats: { 1: {S:0, T:0, E:0, M:0, total:0}, 2: {S:0, T:0, E:0, M:0, total:0} } 
+        };
+
+        const music = document.getElementById('bg-music');
+        let audioCtx, vfxEnabled = true, audioUnlocked = false;
+
+        function unlockAudio() {
+            if (audioUnlocked) return;
+            try {
+                if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+                audioCtx.resume().then(() => {
+                    audioUnlocked = true;
+                    updateHUD();
+                    music.volume = document.getElementById('vol').value;
+                    music.play().catch(e => console.log("Music file track.mp3 not found."));
+                });
+            } catch (err) {}
+        }
+        
+        document.getElementById('vol').oninput = (e) => { music.volume = e.target.value; };
+        document.getElementById('vfx-btn').onclick = (e) => {
+            e.stopPropagation();
+            vfxEnabled = !vfxEnabled;
+            const btn = document.getElementById('vfx-btn');
+            btn.innerText = vfxEnabled ? "VFX: ON" : "VFX: OFF";
+            btn.className = vfxEnabled ? "text-[10px] cyber-font text-green-500" : "text-[10px] cyber-font text-red-500";
+        };
+
+        function playSfx(f, type = 'sine') {
+            if (!vfxEnabled || !audioUnlocked || !audioCtx) return;
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.type = type; o.frequency.setValueAtTime(f, audioCtx.currentTime);
+            g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            o.connect(g); g.connect(audioCtx.destination);
+            o.start(); o.stop(audioCtx.currentTime + 0.3);
+        }
+
+        function init() {
+            const b = document.getElementById('board');
+            b.innerHTML = '';
+            for (let i = 0; i < 64; i++) {
+                const c = document.createElement('div');
+                c.className = 'grid-cell flex items-center justify-center cursor-pointer hover:bg-white/5 transition';
+                if (game.powers.includes(i)) c.classList.add('power-tile');
+                if (game.blockers.includes(i)) c.innerHTML = '<div class="blocker"></div>';
+                if (game.p1 === i) c.innerHTML = '<div class="player-1"></div>';
+                if (game.p2 === i) c.innerHTML = '<div class="player-2"></div>';
+                c.onclick = () => handleClick(i);
+                b.appendChild(c);
+            }
+            updateHUD();
+        }
+
+        function handleClick(idx) {
+            unlockAudio();
+            const cur = game.turn === 1 ? game.p1 : game.p2;
+            const r1 = Math.floor(cur/8), c1 = cur%8;
+            const r2 = Math.floor(idx/8), c2 = idx%8;
+            const dist = Math.abs(r1 - r2) + Math.abs(c1 - c2);
+            const diag = Math.abs(r1 - r2) === 1 && Math.abs(c1 - c2) === 1;
+
+            if (game.fire) {
+                if (game.blockers.includes(idx)) {
+                    game.blockers = game.blockers.filter(b => b !== idx);
+                    game.fire = false; playSfx(150, 'square'); init(); setTimeout(endTurn, 500);
+                }
+                return;
+            }
+            if (game.awaitB) {
+                if (!game.blockers.includes(idx) && idx !== game.p1 && idx !== game.p2) {
+                    game.blockers.push(idx); game.awaitB = false; playSfx(600); endTurn();
+                }
+                return;
+            }
+
+            // REWRITTEN RULE: Any adjacent or diagonal blocker can be attacked at any time.
+            if ((dist === 1 || diag) && game.blockers.includes(idx)) {
+                showQ(idx, true);
+            } else if (dist === 1 && !game.blockers.includes(idx)) {
+                showQ(idx);
+            }
+        }
+
+        let timerInt;
+        function showQ(target, breaking = false) {
+            if (deck.length === 0) deck = [...stemBank].sort(() => Math.random() - 0.5);
+            const q = deck.pop();
+            const mod = document.getElementById('modal');
+            mod.classList.remove('hidden');
+            document.getElementById('q-text').innerText = q.q;
+            const opt = document.getElementById('options'); opt.innerHTML = '';
+            
+            let timeLeft = 15;
+            clearInterval(timerInt);
+            timerInt = setInterval(() => {
+                timeLeft -= 0.1;
+                document.getElementById('timer-fill').style.width = (timeLeft/15*100) + '%';
+                if (timeLeft <= 0) { clearInterval(timerInt); mod.classList.add('hidden'); endTurn(); }
+            }, 100);
+
+            q.o.forEach((o, i) => {
+                const b = document.createElement('button');
+                b.className = 'bg-slate-800 p-4 rounded-xl text-left border border-slate-700 hover:border-yellow-500 transition';
+                b.innerText = o;
+                b.onclick = () => {
+                    clearInterval(timerInt); mod.classList.add('hidden');
+                    if (i === q.c) {
+                        playSfx(880);
+                        game.stats[game.turn].total++;
+                        game.stats[game.turn][q.cat]++;
+                        if (breaking) { 
+                            game.blockers = game.blockers.filter(b => b !== target); 
+                            init(); 
+                            // Breaking a block still ends turn unless it's a move
+                            endTurn();
+                        }
+                        else move(target);
+                    } else { playSfx(200, 'sawtooth'); endTurn(); }
+                };
+                opt.appendChild(b);
+            });
+        }
+
+        function move(idx) {
+            game[game.turn === 1 ? 'p1' : 'p2'] = idx;
+            if (game.powers.includes(idx)) {
+                playSfx(1200, 'square');
+                if (Math.random() > 0.5) { game.fire = true; } 
+                else { init(); return; }
+            } else { game.awaitB = true; }
+            init(); check();
+        }
+
+        function check() {
+            const win = (game.p1 < 8) ? 1 : (game.p2 > 55) ? 2 : null;
+            if (win) {
+                confetti();
+                document.getElementById('summary').classList.remove('hidden');
+                document.getElementById('win-banner').innerText = `PLAYER ${win} VICTORY`;
+                document.getElementById('win-banner').className = `cyber-font text-5xl font-bold mb-10 ${win === 1 ? 'text-blue-500' : 'text-red-500'}`;
+                const getReport = (p) => `<div class="summary-card text-left"><h2 class="cyber-font ${p===1 ? 'text-blue-400' : 'text-red-400'} mb-4">P${p} RECAP</h2><div class="space-y-1 text-sm"><p>🧬 Sci: ${game.stats[p].S}</p><p>💻 Tech: ${game.stats[p].T}</p><p>⚙️ Eng: ${game.stats[p].E}</p><p>📐 Math: ${game.stats[p].M}</p></div><div class="mt-4 pt-4 border-t border-white/10 text-2xl font-bold">SCORE: ${game.stats[p].total}</div></div>`;
+                document.getElementById('summary-grid').innerHTML = getReport(1) + getReport(2);
+            }
+        }
+
+        function endTurn() { game.turn = game.turn === 1 ? 2 : 1; init(); }
+
+        function updateHUD() {
+            document.getElementById('p1-score').innerText = game.stats[1].total;
+            document.getElementById('p2-score').innerText = game.stats[2].total;
+            const ind = document.getElementById('turn-indicator');
+            if (!audioUnlocked) {
+                ind.innerText = "CLICK ANYWHERE TO START AUDIO";
+                ind.className = "text-[10px] mt-1 uppercase tracking-widest font-bold px-3 py-1 rounded-full text-yellow-500 animate-pulse";
+            } else {
+                ind.innerText = game.awaitB ? `P${game.turn}: PLACE BLOCK` : game.fire ? `P${game.turn}: SMASH BLOCK` : `P${game.turn}: MOVE PHASE`;
+                ind.className = `text-[10px] mt-1 uppercase tracking-widest font-bold px-3 py-1 rounded-full ${game.turn === 1 ? 'text-blue-400' : 'text-red-400'}`;
+            }
+        }
+        init();
+    </script>
+</body>
+</html>
